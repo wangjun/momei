@@ -24,11 +24,8 @@ def get_image_link(page):
 
 def get_image_pages(page):
     """analysis page content.
-    
     return (image_pages, next_page)
-    
     images_pages is list
-    
     next_page is string
     """
     text = page
@@ -64,22 +61,32 @@ if __name__ == '__main__':
     # 配置 requests
     #payload = {'tags': tag}
     url = 'https://yande.re/post?tags=%s' % (urllib2.quote(tag))
-    config = {'store_cookies' : False}
+    config = {'store_cookies': False}
+    # proxies = {
+        # 'http': '127.0.0.1:7071',
+        # 'https': '127.0.0.1:8088',
+        # 'http': 'http://user:pass@127.0.0.0.1:3021/',
+    # }
+    proxies = dict()
+    proxy_type = 'http'
+    proxy_site = '127.0.0.1:7071'
+    proxies.update({proxy_type: proxy_site})
     # 获取最新地址
-    # referer = site = requests.get(site, config=config, prefetch=False).url
+    # referer = site = requests.get(site, config=config, proxies=proxies,
+                                    # prefetch=False).url
     headers = {
         'Host': urlparse.urlsplit(site).netloc,
         'User-Agent': ('Mozilla/5.0 (Windows NT 6.2; rv:15.0) Gecko'
-                        + '/20100101 Firefox/15.0.1'),
+                       + '/20100101 Firefox/15.0.1'),
         'Connection': 'keep-alive',
         'Referer': referer
     }
     while max_next_page >= 0:
-        print url
+        # print url
         r = requests.get(url, headers=headers, params={},
-                         config=config, prefetch=False)
+                         config=config, proxies=proxies, prefetch=False)
         if r.status_code == requests.codes.ok:
-            image_pages , next_page = get_image_pages(r.content)
+            image_pages, next_page = get_image_pages(r.content)
             if not image_pages:
                 print 'no image'
                 break
@@ -91,7 +98,7 @@ if __name__ == '__main__':
                     break
                 referer = url
                 headers.update({'Referer': referer})
-                r2 = requests.get(link, headers=headers,
+                r2 = requests.get(link, headers=headers, proxies=proxies,
                                   config=config, prefetch=False)
                 if r2.status_code == requests.codes.ok:
                     image_link = get_image_link(r2.content)
@@ -102,11 +109,12 @@ if __name__ == '__main__':
                         referer = link
                         headers.update({'Referer': referer})
                         r3 = requests.get(image_link, headers=headers,
+                                          proxies=proxies,
                                           config=config, prefetch=False)
                         # print r3.request.headers
                         if r3.status_code == requests.codes.ok:
                             with open(file_path, 'ab', buffering=0) as f:
-                                for i in r3.iter_content(chunk_size=50*1024):
+                                for i in r3.iter_content(chunk_size=50 * 1024):
                                     f.write(i)
                 max_image_page -= 1
                 time.sleep(sleep)
@@ -115,10 +123,11 @@ if __name__ == '__main__':
                     next_page = site + next_page
                 referer = url
                 headers.update({'Referer': referer})
-                url =  next_page.replace('&amp;', '&')
+                url = next_page.replace('&amp;', '&')
                 max_next_page -= 1
             else:
                 break
         else:
             r.raise_for_status()
             break
+    print 'finished'
