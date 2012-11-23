@@ -5,6 +5,10 @@ import re
 
 
 def get_image_link(page):
+    """返回图片下载链接（字符串值或 None）
+
+    page: 图片查看页面网页源代码
+    """
     text = page
     # png 链接所在 id
     re_png_id = re.compile(r'(?i)<a\s+[^>]*?id="png"[^>]*>')
@@ -14,6 +18,10 @@ def get_image_link(page):
     re_link = re.compile(r'(?i)href="([^"]+)"')
     png = re.findall(re_link, str(re.findall(re_png_id, text)))
     jpg = re.findall(re_link, str(re.findall(re_jpg_id, text)))
+    # 优先获取 png 图片下载链接
+    # 因为当存在 png 链接时，
+    # 此时的 jpg 图片其实是经过 png >> jpg 转换的，
+    # 失去了透明背景
     if png:
         return png[0]
     elif jpg:
@@ -23,29 +31,40 @@ def get_image_link(page):
 
 
 def get_image_pages(page):
-    """analysis page content.
-    return (image_pages, next_page)
-    images_pages is list
-    next_page is string
+    """分析搜索结果页面源代码，
+    返回结果条目链接及下一页链接
+
+    return image_pages, next_page
+    images_pages：由搜索结果条目链接组成的列表，默认值为 None
+    next_page：字符串，下一页链接，默认值为 None
     """
     text = page
+    # 搜索结果条目链接
     re_image = re.compile(r'''(?ix)<span\s[^>]*?class="plid"[^>]*?>
                           \s*\#pl\s+([^\s<]+)[^<]*?</span>''')
+    # 下一页所在 a 标签
     re_next_a = re.compile(r'(?i)<a\s[^>]*?class="next_page"[^>]*>')
     re_next = re.compile(r'(?i)href="([^"]+)"')
     image_pages = re.findall(re_image, text)
     next_pages = re.findall(re_next, str(re.findall(re_next_a, text)))
     next_page_ = next_pages[0] if next_pages else None
-    image_pages_ = image_pages if image_pages else None
+    image_pages_ = image_pages or None
     return image_pages_, next_page_
 
 if __name__ == '__main__':
+    # TODO momei.py max_i=18 max_n=1 save='image' proxy_t=http
+    # proxy_s='127.0.0.1:7071' site='https://yande.re/' sleep=100
+    # chunk_size=1000
+    # agent='Mozilla/5.0 (Windows NT 6.2; rv:15.0) Gecko/20100101
+    # Firefox/15.0.1'
     import urllib2
     import urlparse
     import time
     import os
     import charset
+    # from optparse import OptionParser
     import requests
+    # parser = OptionParser()
     save_path = 'images'
     # 如果路径不存在
     if not os.path.exists(save_path):
@@ -68,9 +87,9 @@ if __name__ == '__main__':
         # 'http': 'http://user:pass@127.0.0.0.1:3021/',
     # }
     proxies = dict()
-    proxy_type = 'http'
-    proxy_site = '127.0.0.1:7071'
-    proxies.update({proxy_type: proxy_site})
+    # proxy_type = 'http'
+    # proxy_site = '127.0.0.1:7071'
+    # proxies.update({proxy_type: proxy_site})
     # 获取最新地址
     # referer = site = requests.get(site, config=config, proxies=proxies,
                                     # prefetch=False).url
@@ -116,6 +135,7 @@ if __name__ == '__main__':
                             with open(file_path, 'ab', buffering=0) as f:
                                 for i in r3.iter_content(chunk_size=50 * 1024):
                                     f.write(i)
+                        print u'Finished download %s !' % (image_link)
                 max_image_page -= 1
                 time.sleep(sleep)
             if next_page:
